@@ -15,7 +15,16 @@ local function sendMessageToVisitors(cellDescription, message)
   end
 end
 
-local function roll(pid, cmd)
+ local function sendMessage(message, sendToAllOrCellDesc, playerId)
+  if sendToAllOrCellDesc == true then
+    tes3mp.SendMessage(playerId, message, true)
+    return
+  end
+  assert(type(sendToAllOrCellDesc) == 'string', 'Cannot send a message to a non-string cell description!')
+  sendMessageToVisitors(sendToAllOrCellDesc, message)
+end
+
+local function roll(pid, cmd, sendToAll)
   local player = Players[pid]
   if not player or not player:IsLoggedIn() then return end
 
@@ -42,10 +51,12 @@ local function roll(pid, cmd)
     thisRoll = 'Invalid roll command.\nExample: /roll 2d2-4\n'
   end
 
-  sendMessageToVisitors(player.data.location.cell, thisRoll)
+  local sendToAllOrCellDesc = (sendToAll and sendToAll) or player.data.location.cell
+
+  sendMessage(thisRoll, sendToAllOrCellDesc, pid)
 end
 
-local function reroll(pid, _)
+local function reroll(pid, sendToAll)
   local player = Players[pid]
   assert(player and player:IsLoggedIn()
          , 'Player must be logged in to reroll!')
@@ -54,8 +65,12 @@ local function reroll(pid, _)
 
   if lastRolls[pid] then message = lastRolls[pid]:getResultMessage{ playerId = pid } end
 
-  sendMessageToVisitors(player.data.location.cell, message)
+  local sendToAllOrCellDesc = (sendToAll and sendToAll) or player.data.location.cell
+
+  sendMessage(message, sendToAllOrCellDesc, pid)
 end
 
-customCommandHooks.registerCommand("roll", roll)
-customCommandHooks.registerCommand("reroll", reroll)
+customCommandHooks.registerCommand("roll", function(pid, cmd) roll(pid, cmd, false) end)
+customCommandHooks.registerCommand("rollg", function(pid, cmd) roll(pid, cmd, true) end)
+customCommandHooks.registerCommand("reroll", function(pid) reroll(pid, false) end)
+customCommandHooks.registerCommand("rerollg", function(pid) reroll(pid, true) end)
