@@ -4,11 +4,15 @@
 #include "main.h"
 #include "roll.h"
 #include "test_rolls.h"
+
+const char *BUFFER_LOAD_FAILED_STR = "Failed to load %s: %s";
+const char *BUFFER_EXEC_FAILED_STR = "Failed to execute %s: %s";
+
 int loadBufferToGlobal(lua_State *L, const char *name,
                        const unsigned char *buffer, size_t bufferSize) {
   if (luaL_loadbuffer(L, (const char *)buffer, bufferSize, name) != LUA_OK ||
       lua_pcall(L, 0, 1, 0) != LUA_OK) {
-    return luaL_error(L, "Failed to load %s: %s", name, lua_tostring(L, -1));
+    return luaL_error(L, BUFFER_LOAD_FAILED_STR, name, lua_tostring(L, -1));
   }
 
   lua_setglobal(L, name);
@@ -19,12 +23,12 @@ int loadAndExecuteBuffer(lua_State *L, const char *name,
                          const unsigned char *buffer, size_t bufferSize) {
   // Load the buffer
   if (luaL_loadbuffer(L, (const char *)buffer, bufferSize, name) != LUA_OK) {
-    return luaL_error(L, "Failed to load %s: %s", name, lua_tostring(L, -1));
+    return luaL_error(L, BUFFER_LOAD_FAILED_STR, name, lua_tostring(L, -1));
   }
 
   // Execute the loaded chunk
   if (lua_pcall(L, 0, LUA_MULTRET, 0) != LUA_OK) {
-    return luaL_error(L, "Failed to execute %s: %s", name, lua_tostring(L, -1));
+    return luaL_error(L, BUFFER_EXEC_FAILED_STR, name, lua_tostring(L, -1));
   }
 
   // The number of results is now on top of the stack
