@@ -7,35 +7,50 @@ Roll:addSkills {
   sb = 'Shortblade',
 }
 
+local Format = string.format
+local RegisterCommand = customCommandHooks.registerCommand
+local SendSystemMessage = tes3mp.SendMessage
+local Traceback = debug.traceback
+
+local Players = Players
+local Roll = Roll
+local LoadedCells = LoadedCells
+
+local InvalidRollCommandMessage = 'Invalid roll command.\nExample: /roll 2d2-4\n'
+local NoPreviousRollMessage = 'does not have a previous roll to retry!'
+local LoadedCellAssertMessage = 'A player is in this cell, why wouldn\'t it be loaded?'
+local NonStringCellDescriptionAssertMessage = 'Cannot send a message to a non-string cell description!'
+local UnloggedPlayerRerollAssertMessage = 'Player must be logged in to reroll!'
+
 local function sendMessageToVisitors(cellDescription, message)
   local cell = LoadedCells[cellDescription]
-  assert(cell, 'A player is in this cell, why wouldn\'t it be loaded?' .. debug.traceback(3))
+  assert(cell, Format("%s%s", LoadedCellAssertMessage, Traceback(3)))
 
-  for _, visitorPid in ipairs(cell.visitors) do
-    tes3mp.SendMessage(visitorPid, message, false)
+  local cellVisitors = cell.visitors
+  for _, visitorPid in ipairs(cellVisitors) do
+    SendSystemMessage(visitorPid, message, false)
   end
 end
 
- local function sendMessage(message, sendToAllOrCellDesc, playerId)
+local function sendMessage(message, sendToAllOrCellDesc, playerId)
   if sendToAllOrCellDesc == true then
-    tes3mp.SendMessage(playerId, message, true)
-    return
+    SendSystemMessage(playerId, message, true)
+  else
+    assert(type(sendToAllOrCellDesc) == 'string', NonStringCellDescriptionAssertMessage)
+    sendMessageToVisitors(sendToAllOrCellDesc, message)
   end
-  assert(type(sendToAllOrCellDesc) == 'string', 'Cannot send a message to a non-string cell description!')
-  sendMessageToVisitors(sendToAllOrCellDesc, message)
 end
 
 local function roll(pid, cmd, sendToAll)
   local player = Players[pid]
-  if not player or not player:IsLoggedIn() then return end
+  local rollAttempt = cmd[2]
+  if not (player and player:IsLoggedIn() and rollAttempt) then return end
 
-  local thisRoll = cmd[2]
+  local rollMessage = InvalidRollCommandMessage
 
-  if thisRoll and thisRoll ~= '' then
-
-    local rollInput
-    local statName, statRoll = Roll:fromStatId(pid, thisRoll)
-    if not statRoll then rollInput = thisRoll else rollInput = statRoll end
+  if rollAttempt then
+    local statName, statRoll = Roll:fromStatId(pid, rollAttempt)
+    local rollInput = statRoll or rollAttempt
 
     ---@type RollObject
     local currentRoll = Roll(rollInput)
@@ -44,39 +59,26 @@ local function roll(pid, cmd, sendToAll)
 
     lastRolls[pid] = currentRoll
 
-    thisRoll = currentRoll:getResultMessage {
+    rollMessage = currentRoll:getResultMessage {
       playerId = pid,
       forStat = statName,
     }
-  else
-    thisRoll = 'Invalid roll command.\nExample: /roll 2d2-4\n'
   end
 
-  local sendToAllOrCellDesc = (sendToAll and sendToAll) or player.data.location.cell
-
-  sendMessage(thisRoll, sendToAllOrCellDesc, pid)
+  sendMessage(rollMessage, sendToAll or player.data.location.cell, pid)
 end
 
 local function reroll(pid, sendToAll)
   local player = Players[pid]
-  assert(player and player:IsLoggedIn()
-         , 'Player must be logged in to reroll!')
+  assert(player and player:IsLoggedIn(), UnloggedPlayerRerollAssertMessage)
 
-  local message
+  local message = lastRolls[pid] and lastRolls[pid]:getResultMessage { playerId = pid }
+    or Format("%s %s", Players[pid].accountName, NoPreviousRollMessage)
 
-  local prevRoll = lastRolls[pid]
-  if prevRoll then
-    message = prevRoll:getResultMessage{ playerId = pid }
-  else
-    message = player.accountName .. " does not have a previous roll to retry!\n"
-  end
-
-  local sendToAllOrCellDesc = (sendToAll and sendToAll) or player.data.location.cell
-
-  sendMessage(message, sendToAllOrCellDesc, pid)
+  sendMessage(message, sendToAll or player.data.location.cell, pid)
 end
 
-customCommandHooks.registerCommand("roll", function(pid, cmd) roll(pid, cmd, false) end)
-customCommandHooks.registerCommand("rollg", function(pid, cmd) roll(pid, cmd, true) end)
-customCommandHooks.registerCommand("reroll", function(pid) reroll(pid, false) end)
-customCommandHooks.registerCommand("rerollg", function(pid) reroll(pid, true) end)
+RegisterCommand("roll", function(pid, cmd) roll(pid, cmd, false) end)
+RegisterCommand("rollg", function(pid, cmd) roll(pid, cmd, true) end)
+RegisterCommand("reroll", function(pid) reroll(pid, false) end)
+RegisterCommand("rerollg", function(pid) reroll(pid, true) end)
