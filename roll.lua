@@ -21,6 +21,7 @@ local green = color.Green
 local lightBlue = color.LightBlue
 local yellow = color.Yellow
 
+local DICE_MIN_FACES = 3
 local DICE_TYPES = {4, 6, 8, 10, 12, 20, 100}
 local ITERATIONS_PER_DICE = 25
 local MAX_FACES_OR_DICE = 10000
@@ -266,13 +267,13 @@ end
 ---@param input RollString
 ---@return RollFaces
 function Roll.getNumFaces(input)
-    if not isValidString(input) then return 3 end
+    if not isValidString(input) then return DICE_MIN_FACES end
 
     local start_pos = find(lower(input), 'd')
     if not start_pos then
         local numFaces = tonumber(input)
         if numFaces then return numFaces end
-        return 3
+        return DICE_MIN_FACES
     end
 
     local substring = sub(input, start_pos + 1)
@@ -284,7 +285,7 @@ function Roll.getNumFaces(input)
 
     local number = tonumber(substring)
 
-    if not number or number <= 3 then return 3
+    if not number or number <= DICE_MIN_FACES then return DICE_MIN_FACES
     elseif MAX_FACES_OR_DICE <= number then return MAX_FACES_OR_DICE end
 
     return number
@@ -345,7 +346,7 @@ end
 function Roll:addAttributes(attributeTable)
     local Attributes = self.Attributes
     for k, v in pairs(attributeTable) do
-        if not Attributes[k] then rawset(Attributes, k, v) end
+        if not rawget(Attributes, k) then rawset(Attributes, k, v) end
     end
 end
 
@@ -353,7 +354,7 @@ end
 function Roll:addSkills(skillTable)
     local Skills = self.Skills
     for k, v in pairs(skillTable) do
-        if not Skills[k] then rawset(Skills, k, v) end
+        if not rawget(Skills, k) then rawset(Skills, k, v) end
     end
 end
 
