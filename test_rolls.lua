@@ -1,4 +1,7 @@
--- local Roll = require('roll')
+local RollDep
+
+RollDep = Roll or require('roll')
+
 ---Only meant to be ran for performance reasons under luaJIT.
 ---Do not deploy this under tes3mp directly!
 local testPairs = {
@@ -17,7 +20,7 @@ local testIterations = 10
   for dice, faces in pairs(testPairs) do
     local thisRoll = format('%sd%s+%s', dice, faces, rand(-100, 100))
     for _ = 1, testIterations do
-      local rollObject = Roll(thisRoll)
+      local rollObject = RollDep(thisRoll)
       rollObject:resolve()
       print(rollObject, rollObject:resolve())
     end
