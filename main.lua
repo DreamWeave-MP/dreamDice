@@ -8,9 +8,10 @@ Roll:addSkills {
 }
 
 local function sendMessageToVisitors(cellDescription, message)
-  assert(logicHandler.IsCellLoaded(cellDescription), 'A player is in this cell, why wouldn\'t it be loaded?')
+  local cell = LoadedCells[cellDescription]
+  assert(cell, 'A player is in this cell, why wouldn\'t it be loaded?' .. debug.traceback(3))
 
-  for _, visitorPid in pairs(LoadedCells[cellDescription].visitors) do
+  for _, visitorPid in ipairs(cell.visitors) do
     tes3mp.SendMessage(visitorPid, message, false)
   end
 end
