@@ -4,8 +4,10 @@ Dream-Dice is a standalone dice roller for TES3MP and Dreamweave. It supports ea
 
 It has two chat commands:
 
-- /roll : makes a new roll based on numbers or stats
-- /reroll : does whatever your last roll was, but with a fresh result
+- /roll : makes a new roll based on numbers or stats - Sent to players in the same cell
+- /reroll : does whatever your last roll was, but with a fresh result - Sent to players in the same cell
+- /rollg : Same as above, but sends result to everyone
+- /rerollg : Same as above, but sends result to everyone
 
 # Examples
 
