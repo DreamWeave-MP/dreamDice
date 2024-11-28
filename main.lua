@@ -62,9 +62,14 @@ local function reroll(pid, sendToAll)
   assert(player and player:IsLoggedIn()
          , 'Player must be logged in to reroll!')
 
-  local message = player.accountName .. " does not have a previous roll to retry!\n"
+  local message
 
-  if lastRolls[pid] then message = lastRolls[pid]:getResultMessage{ playerId = pid } end
+  local prevRoll = lastRolls[pid]
+  if prevRoll then
+    message = prevRoll:getResultMessage{ playerId = pid }
+  else
+    message = player.accountName .. " does not have a previous roll to retry!\n"
+  end
 
   local sendToAllOrCellDesc = (sendToAll and sendToAll) or player.data.location.cell
 
