@@ -10,6 +10,8 @@ It has two chat commands:
 # Examples
 
 ``` lua
+/roll strength
+/roll LoNgBlaDe
 /roll 1d20
 /roll d4
 /roll 3d
