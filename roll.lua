@@ -8,15 +8,35 @@ local abs = math.abs
 local find = string.find
 local floor = math.floor
 local format = string.format
+local HUGE = math.huge
 local lower = string.lower
+local match = string.match
 local rand = math.random
 local sub = string.sub
-local match = string.match
+
+local Players = Players
+local blueViolet = color.BlueViolet
+local defaultColor = color.Default
+local green = color.Green
+local lightBlue = color.LightBlue
+local yellow = color.Yellow
 
 local DICE_TYPES = {4, 6, 8, 10, 12, 20, 100}
-local HUGE = math.huge
 local ITERATIONS_PER_DICE = 25
 local MAX_FACES_OR_DICE = 10000
+
+local LogLoggedPlayerError = 'Must be used with both playerId on a logged player, and called with colon notation!'
+local RollOneNoFacesError = 'Faces arg must be provided when calling rollOne!'
+local RollFormatStr = '[ ROLL ]: %s: %s'
+local RollForStatFormatString = '%s for %s'
+local RollFromNumberNoModifierString = '%dd%d'
+local RollFromNumberHasModifierString = RollFromNumberNoModifierString .. '+%d'
+local RollModifierMatchString = '([+-])()'
+local RollNewIndexError = 'Cannot modify field %s of immutable Roll!'
+local RollNumDiceMatchString = '^(.-)d'
+local RollNumFacesMatchString = '[+-]'
+local RollResultMessageFormatString = '%s%s%s rolled %s%s %s%s-sided %s with a modifier of %s%s for a total of %s%s%s%s.\n%s'
+local RollToStringString = 'Roll( Modifier: %s, Dice: %s, Faces: %s )'
 
 ---@alias Attribute
 ---| 'Strength'
@@ -113,30 +133,29 @@ local function getResultMessage(self, rollData)
     local player = Players[rollData.playerId]
     if not player or not player:IsLoggedIn() then return end
 
-    local forStat = ''
-    if rollData.forStat then forStat = color.Green .. ' for ' .. rollData.forStat end
+    local forStat = (rollData.forStat and string.format(RollForStatFormatString, green, rollData.forStat)) or ''
+    local rollResult = rollData.result or self:resolve()
 
-    if not rollData.result then rollData.result = self:resolve() end
-
+    local diceNum = self.diceCount
     local dieOrDice = 'dice'
-    if self.diceNum == 1 then dieOrDice = 'die' end
+    if diceNum == 1 then dieOrDice = 'die' end
 
-    return string.format('%s%s%s rolled %s%s %s%s-sided %s with a modifier of %s%s for a total of %s%s%s%s.\n%s',
-                          color.LightBlue,
+    return string.format(RollResultMessageFormatString,
+                          lightBlue,
                           player.accountName,
-                          color.BlueViolet,
-                          color.Green,
-                          self.diceCount,
-                          color.BlueViolet,
+                          blueViolet,
+                          green,
+                          diceNum,
+                          blueViolet,
                           self.faceCount,
                           dieOrDice,
-                          color.Green,
+                          green,
                           self.modifier,
-                          color.Yellow,
-                          rollData.result,
+                          yellow,
+                          rollResult,
                           forStat,
-                          color.BlueViolet,
-                          color.Default)
+                          blueViolet,
+                          defaultColor)
 end
 
 ---@param input string
@@ -147,7 +166,7 @@ end
 
 ---@return integer roll result for a single die
 local function rollOne(faces)
-    assert(faces, 'Faces arg must be provided when calling rollOne!')
+    assert(faces, RollOneNoFacesError)
     for i = 1, ITERATIONS_PER_DICE do
         local sideRoll = rand(1, faces)
         if i == ITERATIONS_PER_DICE then return sideRoll end
@@ -169,13 +188,8 @@ end
 
 local function log(self, playerId)
     local player = Players[playerId]
-    assert(self ~= nil
-           and playerId ~= nil
-           and player ~= nil
-           and player:IsLoggedIn()
-           , 'Must be used with both playerId on a logged player, and called with colon notation!')
-    print(format('[ %s ]: %s: %s', 'ROLL'
-                        , Players[playerId].accountName, self))
+    assert(self and player and player:IsLoggedIn(), LogLoggedPlayerError)
+    print(format(RollFormatStr, Players[playerId].accountName, self))
 end
 
 ---@class RollObject
@@ -204,10 +218,10 @@ function Roll:__call(rollString)
     return setmetatable({}, {
         __index = private,
         __newindex = function(_, key, _)
-            error('Cannot modify field "' .. key .. '" of immutable Roll object', 2)
+            error(format(RollNewIndexError, key), 2)
         end,
         __tostring = function(roll)
-            return string.format('Roll( Modifier: %s, Dice: %s, Faces: %s )'
+            return string.format(RollToStringString
                                  , roll.modifier, roll.diceCount, roll.faceCount)
         end
     })
@@ -218,7 +232,7 @@ end
 function Roll.getModifier(input)
     if not isValidString(input) then return 0 end
 
-    local sign, pos = match(input, '([+-])()')
+    local sign, pos = match(input, RollModifierMatchString)
 
     if not sign then return 0 end
 
@@ -238,7 +252,7 @@ end
 function Roll.getNumDice(input)
     if not isValidString(input) then return 1 end
 
-    local before_d = match(input, '^(.-)d')
+    local before_d = match(input, RollNumDiceMatchString)
     if not before_d or before_d == '' then return 1 end
 
     local number = tonumber(before_d)
@@ -263,7 +277,7 @@ function Roll.getNumFaces(input)
 
     local substring = sub(input, start_pos + 1)
 
-    local end_pos = find(substring, '[+-]')
+    local end_pos = find(substring, RollNumFacesMatchString)
     if end_pos then
         substring = sub(substring, 1, end_pos - 1)
     end
@@ -296,10 +310,10 @@ function Roll.fromNumber(targetValue)
     end
 
     if bestRoll.modifier > 0 then
-        return format("%dd%d+%d", bestRoll.dice, bestRoll.sides, bestRoll.modifier)
+        return format(RollFromNumberHasModifierString, bestRoll.dice, bestRoll.sides, bestRoll.modifier)
     end
 
-    return format("%dd%d", bestRoll.dice, bestRoll.sides)
+    return format(RollFromNumberNoModifierString, bestRoll.dice, bestRoll.sides)
 end
 
 ---@param playerId integer
