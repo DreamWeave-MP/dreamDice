@@ -16,7 +16,13 @@ local Players = Players
 local Roll = Roll
 local LoadedCells = LoadedCells
 
-local InvalidRollCommandMessage = 'Invalid roll command.\nExample: /roll 2d2-4\n'
+local darkMagenta = color.DarkMagenta
+local green = color.Green
+local red = color.Red
+local yellow = color.Yellow
+
+local InvalidRollCommandMessage = Format('%sInvalid roll command.\n%sExample: %s/roll %s2d2-4\n'
+                                         , red, darkMagenta, green, yellow)
 local NoPreviousRollMessage = 'does not have a previous roll to retry!'
 local LoadedCellAssertMessage = 'A player is in this cell, why wouldn\'t it be loaded?'
 local NonStringCellDescriptionAssertMessage = 'Cannot send a message to a non-string cell description!'
@@ -44,7 +50,7 @@ end
 local function roll(pid, cmd, sendToAll)
   local player = Players[pid]
   local rollAttempt = cmd[2]
-  if not (player and player:IsLoggedIn() and rollAttempt) then return end
+  if not player and player:IsLoggedIn() then return end
 
   local rollMessage = InvalidRollCommandMessage
 
