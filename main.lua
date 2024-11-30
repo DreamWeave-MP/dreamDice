@@ -1,5 +1,7 @@
--- Roll = require('roll')
--- Roll = require('custom.dreamDice.roll')
+if not Roll then
+  Roll = require('custom.dreamDice.roll')
+end
+
 local lastRolls = {}
 
 Roll:addSkills {
