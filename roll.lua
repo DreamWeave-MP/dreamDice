@@ -15,11 +15,20 @@ local rand = math.random
 local sub = string.sub
 
 local Players = Players
-local blueViolet = color.BlueViolet
-local defaultColor = color.Default
-local green = color.Green
-local lightBlue = color.LightBlue
-local yellow = color.Yellow
+
+local blueViolet
+local defaultColor
+local green
+local lightBlue
+local yellow
+
+if color then
+    blueViolet = color.BlueViolet
+    defaultColor = color.Default
+    green = color.Green
+    lightBlue = color.LightBlue
+    yellow = color.Yellow
+end
 
 local DICE_MIN_FACES = 3
 local DICE_TYPES = {4, 6, 8, 10, 12, 20, 100}
